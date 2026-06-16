@@ -890,7 +890,7 @@
 <a href="{{ $derniereConv ? route('messagerie', ['id' => $derniereConv->idconversion]) : '#' }}" 
    style="text-decoration: none; display: flex; align-items: center; gap: 10px; padding: 12px; color: var(--dark); font-weight: 500;">
     <i class="fa-solid fa-comments" style="color: var(--blue2); font-size: 20px;"></i>
-    <span>{{ session('lang','fr') === 'ar' ? 'الرسائل' : '' }}</span>
+    <span>{{ session('lang','fr') === 'ar' ? 'الرسائل' : 'Ma Messagerie' }}</span>
 </a>
 
         {{-- Notification bell --}}
@@ -1301,14 +1301,14 @@
             © 2026 EtudServ. {{ session('lang','fr') === 'ar' ? 'جميع الحقوق محفوظة' : 'Tous droits réservés' }}.
         </span>
         <span class="footer-made">
-            {{ session('lang','fr') === 'ar' ? 'صُنع  في موريتانيا' : 'Fait  en Mauritanie' }}
+            {{ session('lang','fr') === 'ar' ? 'صُنع بـ ❤️ في موريتانيا' : 'Fait avec ❤️ en Mauritanie' }}
         </span>
     </div>
 </footer>
 
 <div id="section-freelancers" style="margin-top: 50px; margin-bottom: 50px; padding: 0 30px;">
     <h3 style="color: var(--dark); font-weight: 700; font-size: 22px; margin-bottom: 25px;">
-        {{ session('lang','fr') === 'ar' ? 'المستقلون المتاحون' : 'Freelancers Disponibles' }}
+        {{ session('lang','fr') === 'ar' ? 'المستقلون المتاحون' : '🚀 Freelancers Disponibles' }}
     </h3>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
@@ -1415,6 +1415,7 @@ function closeDeleteAccountModal() {
 }
 
 // Bascule d'effet Mode Sombre
+// Bascule d'effet Mode Sombre
 function toggleDarkModeEffect(event) {
     event.stopPropagation();
     const body = document.body;
@@ -1425,13 +1426,23 @@ function toggleDarkModeEffect(event) {
     if (isDark) {
         switchBg.style.background = '#39C6E9';
         handle.style.left = '17px';
+        
+        // Application du filtre d'inversion d'origine
         body.style.filter = 'invert(0.93) hue-rotate(180deg)';
         document.querySelectorAll('img, i, .avatar').forEach(el => el.style.filter = 'invert(1) hue-rotate(180deg)');
+        
+        // AJOUT : On force le background à devenir Blue Velvet sous le filtre
+        body.style.backgroundColor = '#0A1128'; 
     } else {
         switchBg.style.background = '#E5E7EB';
         handle.style.left = '3px';
-        body.style.filter = 'none';
-        document.querySelectorAll('img, i, .avatar').forEach(el => el.style.filter = 'none');
+        
+        // Réinitialisation d'origine
+        body.style.filter = '';
+        document.querySelectorAll('img, i, .avatar').forEach(el => el.style.filter = '');
+        
+        // RETRAIT : On enlève le background Blue Velvet en mode clair
+        body.style.backgroundColor = ''; 
     }
 }
 </script>
