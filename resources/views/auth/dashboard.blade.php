@@ -1174,7 +1174,6 @@ function openDeleteAccountModal() {
 function closeDeleteAccountModal() {
     document.getElementById('deleteAccountModal').style.display = 'none';
 }
-
 // Effet de bascule dynamique du Mode Sombre
 function toggleDarkModeEffect(event) {
     event.stopPropagation();
@@ -1186,13 +1185,23 @@ function toggleDarkModeEffect(event) {
     if (isDark) {
         switchBg.style.background = '#7B61FF';
         handle.style.left = '17px';
+        
+        // Application du filtre d'inversion d'origine
         body.style.filter = 'invert(0.93) hue-rotate(180deg)';
         document.querySelectorAll('img, i, .avatar').forEach(el => el.style.filter = 'invert(1) hue-rotate(180deg)');
+        
+        // AJOUT : On force le background à devenir Blue Velvet sous le filtre
+        body.style.backgroundColor = '#0A1128'; 
     } else {
         switchBg.style.background = '#E5E7EB';
         handle.style.left = '3px';
+        
+        // Réinitialisation d'origine
         body.style.filter = 'none';
         document.querySelectorAll('img, i, .avatar').forEach(el => el.style.filter = 'none');
+        
+        // RETRAIT : On enlève le background Blue Velvet en mode clair
+        body.style.backgroundColor = ''; 
     }
 }
 </script>
