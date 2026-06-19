@@ -1123,6 +1123,58 @@
     {{-- ── SIDEBAR ── --}}
     <aside class="sidebar">
 
+        {{-- ===== PROFIL CLIENT ===== --}}
+        @php
+            $nomCompletProfil = trim(($client->nom ?? '') . ' ' . ($client->prenom ?? '')) ?: session('utilisateur_nom', 'Client');
+            $emailProfil = $client->email ?? session('utilisateur_email', '');
+            $conversationsActives = \App\Models\Message::where(function($q) use ($nomCompletClient) {
+                    $q->where('destinataire', $nomCompletClient)
+                      ->orWhere('expediteur', $nomCompletClient);
+                })
+                ->distinct()
+                ->count('conversion_idconversion');
+        @endphp
+        <div class="sidebar-card" style="background:var(--white); border-radius:24px; padding:26px 24px; box-shadow:0 10px 30px rgba(5,22,26,0.06); margin-bottom:24px; text-align:center;">
+            <div style="width:72px;height:72px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:white;background:linear-gradient(135deg, var(--blue), var(--purple));overflow:hidden;">
+                @if($uConnecte && $uConnecte->photo)
+                    <img src="{{ asset('storage/' . $uConnecte->photo) }}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;">
+                @else
+                    {{ strtoupper(substr($nomCompletProfil, 0, 1)) }}
+                @endif
+            </div>
+
+            <h3 style="font-size:18px;font-weight:700;color:var(--dark);margin-bottom:8px;">{{ $nomCompletProfil }}</h3>
+
+            <p style="font-size:13px;color:var(--gray);display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px;">
+                <i class="fa-regular fa-envelope"></i> {{ $emailProfil }}
+            </p>
+
+            @if($client && $client->created_at)
+                <p style="font-size:13px;color:var(--gray);display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;">
+                    <i class="fa-regular fa-calendar"></i>
+                    {{ session('lang','fr') === 'ar' ? 'عضو منذ' : 'Membre depuis le' }} {{ \Carbon\Carbon::parse($client->created_at)->format('d/m/Y') }}
+                </p>
+            @endif
+
+            <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(12,171,168,0.12);color:var(--blue2);font-weight:700;font-size:13px;padding:6px 16px;border-radius:20px;">
+                💼 {{ session('lang','fr') === 'ar' ? 'عميل' : 'Client' }}
+            </span>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px;">
+                <div style="background:var(--bg);border-radius:14px;padding:16px 8px;">
+                    <div style="font-size:22px;font-weight:800;color:var(--dark);">{{ $nombreProjets }}</div>
+                    <div style="font-size:12px;color:var(--gray);margin-top:4px;">{{ session('lang','fr') === 'ar' ? 'مشاريع منشورة' : 'Projets publiés' }}</div>
+                </div>
+                <div style="background:var(--bg);border-radius:14px;padding:16px 8px;">
+                    <div style="font-size:22px;font-weight:800;color:var(--dark);">{{ $conversationsActives }}</div>
+                    <div style="font-size:12px;color:var(--gray);margin-top:4px;">{{ session('lang','fr') === 'ar' ? 'محادثات نشطة' : 'Conversations actives' }}</div>
+                </div>
+            </div>
+
+            <a href="{{ route('profil.show', session('utilisateur_id') ?? session('idutilisateur')) }}" style="display:block;margin-top:18px;font-size:13px;font-weight:600;color:var(--blue);text-decoration:none;">
+                {{ session('lang','fr') === 'ar' ? 'عرض الملف الكامل' : 'Voir le profil complet' }} →
+            </a>
+        </div>
 
         {{-- Notifications --}}
         @php
@@ -1168,15 +1220,13 @@
         <span class="footer-copy">
             © 2026 EtudServ. {{ session('lang','fr') === 'ar' ? 'جميع الحقوق محفوظة' : 'Tous droits réservés' }}.
         </span>
-        <span class="footer-made">
-            {{ session('lang','fr') === 'ar' ? 'صُنع بـ ❤️ في موريتانيا' : 'Fait avec ❤️ en Mauritanie' }}
-        </span>
+        
     </div>
 </footer>
 
 <div id="section-freelancers" style="margin-top: 50px; margin-bottom: 50px; padding: 0 30px;">
     <h3 style="color: var(--dark); font-weight: 700; font-size: 22px; margin-bottom: 25px;">
-        {{ session('lang','fr') === 'ar' ? 'المستقلون المتاحون' : '🚀 Freelancers Disponibles' }}
+        {{ session('lang','fr') === 'ar' ? 'المستقلون المتاحون' : ' Freelancers Disponibles' }}
     </h3>
 
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
