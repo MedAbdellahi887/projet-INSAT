@@ -27,11 +27,10 @@ class Utilisateur extends Model
         'telephone',
         'date_inscription',
         'adresse',
-        'role'
-    ];
-
-    protected $casts = [
-        'date_inscription'=>'datetime',
+        'role',
+        'photo',
+        'est-active',
+        'derniere_active'
     ];
     public function prestataire()
 {
