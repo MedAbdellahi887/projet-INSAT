@@ -144,6 +144,12 @@ body {
     border: 1px solid rgba(12, 171, 168, 0.15);
 }
 
+.badge-client {
+    background: #FFF7ED;
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
 /* ================= MEMBER SINCE EXTRA CONTAINER ================= */
 .member-since {
     background: var(--bg-main);
@@ -277,12 +283,53 @@ body {
     font-size: 14px;
 }
 
+/* ================= PROJETS PUBLIÉS (CLIENT) ================= */
+.projet-item {
+    border-bottom: 1px solid var(--border-color);
+    padding: 18px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.projet-item:first-child { padding-top: 0; }
+.projet-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.projet-titre { font-weight: 700; font-size: 14px; color: var(--text-dark); margin-bottom: 4px; }
+.projet-cat { font-size: 12px; color: var(--text-muted); }
+.projet-budget {
+    background: #F0FDF4;
+    color: #16A34A;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* ================= BOUTON MESSAGERIE (CLIENT) ================= */
+.btn-message {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-slate));
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 8px 20px rgba(12,171,168,0.25);
+}
+.btn-message:hover { transform: translateY(-2px); }
+
 /* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
     .navbar { padding: 20px 30px; }
     .profile-header { flex-direction: column; text-align: center; padding: 30px 20px; }
     .profile-info p { justify-content: center; }
     .member-since { margin: 15px auto 0 auto; }
+    .projet-item { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
     </style>
 </head>
@@ -305,6 +352,8 @@ body {
                 <p><i class="fa-regular fa-calendar"></i> Membre depuis le {{ \Carbon\Carbon::parse($utilisateur->date_inscription)->format('d/m/Y') }}</p>
                 @if($prestataireProfil)
                     <span class="badge">{{ $prestataireProfil->type_prestataire }} — {{ $prestataireProfil->niveau }}</span>
+                @else
+                    <span class="badge badge-client">💼 Client</span>
                 @endif
             </div>
         </div>
@@ -359,6 +408,51 @@ body {
             @endforelse
         </div>
         @else
+
+        {{-- ===== STATISTIQUES CLIENT ===== --}}
+        @php $projets = session('projets', []); @endphp
+        <div class="card">
+            <h2><i class="fa-solid fa-chart-line"></i> Statistiques</h2>
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="num">{{ count($projets) }}</div>
+                    <div class="label">Projets publiés</div>
+                </div>
+                <div class="stat-box">
+                    <div class="num">
+                        {{ \App\Models\Conversion::where('utilisateur_idutilisateur', $utilisateur->idutilisateur)->count() }}
+                    </div>
+                    <div class="label">Conversations actives</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===== PROJETS PUBLIÉS (CLIENT) ===== --}}
+        <div class="card">
+            <h2><i class="fa-solid fa-briefcase"></i> Projets publiés</h2>
+            @forelse($projets as $projet)
+                <div class="projet-item">
+                    <div>
+                        <div class="projet-titre">{{ $projet['titre'] }}</div>
+                        <div class="projet-cat">{{ $projet['categorie'] ?? 'Non catégorisé' }}</div>
+                    </div>
+                    @if(isset($projet['budget']))
+                        <span class="projet-budget">{{ number_format($projet['budget'], 0, ',', ' ') }} MRU</span>
+                    @endif
+                </div>
+            @empty
+                <p class="empty-text">Aucun projet publié pour le moment.</p>
+            @endforelse
+        </div>
+
+        {{-- ===== MESSAGERIE (CLIENT) ===== --}}
+        <div class="card">
+            <h2><i class="fa-solid fa-comments"></i> Messagerie</h2>
+            <a href="{{ route('messagerie.index') }}" class="btn-message">
+                <i class="fa-solid fa-paper-plane"></i> Accéder à la messagerie
+            </a>
+        </div>
+
         <div class="card">
             <p class="empty-text">Cet utilisateur n'a pas encore de profil prestataire.</p>
         </div>
