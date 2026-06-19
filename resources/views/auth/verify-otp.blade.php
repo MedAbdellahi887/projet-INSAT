@@ -7,109 +7,122 @@
     
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-        .register-wrapper {
-            width: 100%;
-            max-width: 450px;
-            padding: 20px;
-        }
-        .register-box {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            text-align: center;
-        }
-        h2 { color: #333; margin-bottom: 10px; }
-        .subtitle { color: #666; font-size: 14px; margin-bottom: 30px; }
-        .form-group { text-align: left; margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; color: #444; font-weight: 500; }
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 16px;
-            text-align: center;
-            letter-spacing: 4px;
-        }
-        .btn-verify {
-            width: 100%;
-            padding: 14px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s ease;
-        }
-        .btn-verify:hover { background-color: #0056b3; }
-        .error-message { color: #dc3545; font-size: 13px; margin-top: 5px; display: block; text-align: left; }
-        
-        /* Nouveaux styles pour le renvoi de code */
-        .success-message {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .resend-container {
-            margin-top: 25px;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-            font-size: 14px;
-            color: #666;
-        }
-        .btn-resend {
-            background: none;
-            border: none;
-            color: #007bff;
-            cursor: pointer;
-            font-weight: bold;
-            text-decoration: underline;
-            padding: 0;
-            font-size: 14px;
-        }
-        .btn-resend:disabled {
-            color: #aaa;
-            cursor: not-allowed;
-            text-decoration: none;
-        }
-        .logo-text{
-            font-size:50px;
-            font-weight:bold;
-            display: inline-block;
-            animation: glisseBas 2s ease-in-out infinite alternate;
-        }
-        /* Définition du mouvement */
-        @keyframes glisseBas {
-            0% {
-            transform: translateY(0); /* Position de départ */
-            }
-            100% {
-            transform: translateY(30px); /* Descend de 30 pixels */
-            }
-        }
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #EDF6F9 0%, #d4eef5 40%, #b8e0ec 100%);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+.register-wrapper {
+    width: 100%;
+    max-width: 450px;
+    padding: 20px;
+}
+.register-box {
+    background: rgba(255, 255, 255, 0.82);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(7,46,51,0.10);
+    text-align: center;
+    border: 1.5px solid rgba(109,165,192,0.25);
+}
+h2 { color: #05161A; margin-bottom: 10px; }
+.subtitle { color: #294D61; font-size: 14px; margin-bottom: 30px; }
+.form-group { text-align: left; margin-bottom: 20px; }
+label { display: block; margin-bottom: 8px; color: #072E33; font-weight: 500; }
+input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 1.5px solid rgba(109,165,192,0.45);
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 16px;
+    text-align: center;
+    letter-spacing: 4px;
+    background: rgba(237,246,249,0.70);
+    color: #05161A;
+}
+input[type="text"]:focus {
+    border-color: #0CABA8;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(12,171,168,0.12);
+}
+.btn-verify {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #0CABA8 0%, #0A9996 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s ease;
+    box-shadow: 0 8px 24px rgba(12,171,168,0.35);
+}
+.btn-verify:hover { background: linear-gradient(135deg, #0A9996 0%, #072E33 100%); }
+.error-message { color: #EF4444; font-size: 13px; margin-top: 5px; display: block; text-align: left; }
+
+/* Nouveaux styles pour le renvoi de code */
+.success-message {
+    background: linear-gradient(135deg, #ECFDF5, #d1fae5);
+    color: #065F46;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    border: 1px solid #A7F3D0;
+}
+.resend-container {
+    margin-top: 25px;
+    border-top: 1px solid rgba(109,165,192,0.25);
+    padding-top: 15px;
+    font-size: 14px;
+    color: #294D61;
+}
+.btn-resend {
+    background: none;
+    border: none;
+    color: #0CABA8;
+    cursor: pointer;
+    font-weight: bold;
+    text-decoration: underline;
+    padding: 0;
+    font-size: 14px;
+}
+.btn-resend:hover { color: #072E33; }
+.btn-resend:disabled {
+    color: #6DA5C0;
+    cursor: not-allowed;
+    text-decoration: none;
+    opacity: 0.6;
+}
+.logo-text{
+    font-size:50px;
+    font-weight:bold;
+    display: inline-block;
+    animation: glisseBas 2s ease-in-out infinite alternate;
+}
+
+/* Définition du mouvement de l'animation */
+@keyframes glisseBas {
+    0% {
+        transform: translateY(0); /* Position de départ */
+    }
+    100% {
+        transform: translateY(30px); /* Descend de 30 pixels */
+    }
+}
     </style>
 </head>
 <body>
 
     <header class="navbar">
         <div class="logo">
-            <span class="logo-text"><span style="color: #0bbeff;">Etud</span>Serv</span>
+            <span class="logo-text"><span style="color: #6DA5C0;">Etud</span>Serv</span>
         </div>
     </header>
 
