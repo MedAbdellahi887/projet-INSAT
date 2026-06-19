@@ -14,7 +14,7 @@ use App\Http\Controllers\ProfilController;
 
 // ================= ACCUEIL ET ETUDSERV =================
 Route::get('/', function () {
-    return view('welcome');
+    return view('auth.welcome');
 });
 
 // ======= ROUTE SIMPLE DIRECTE VERS HOME (Nettoyée et unique) =======
@@ -201,3 +201,8 @@ Route::post('/avis', [AvisController::class, 'store'])->name('avis.store');
 // ================= PROFIL =================
 Route::get('/profil/{id}', [ProfilController::class, 'show'])->name('profil.show');
 
+// Route pour le Dashboard Client (profil.photo.update)
+Route::post('/profile/update-photo', [UtilisateurController::class, 'updatePhoto'])->name('profil.photo.update');
+
+// Route pour le Dashboard Freelancer (profile.update.photo)
+Route::post('/profile/update-photo-freelancer', [UtilisateurController::class, 'updatePhoto'])->name('profile.update.photo');
