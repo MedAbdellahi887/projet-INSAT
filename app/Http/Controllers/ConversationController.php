@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Conversation; //on importe le modele conversation
+use App\Models\Conversion;
 
 class ConversationController extends Controller
 {
@@ -11,7 +11,7 @@ class ConversationController extends Controller
     public function démarrer(Request $request)
     {
         //  On prépare une nouvelle ligne dans la table 'conversation'
-        $conversation = new Conversation();
+        $conversation = new Conversion();
 
         //  On remplit avec les données (Saisies ou automatiques)
         $conversation->note = $request->input('note'); // Si vous donnez une note de départ

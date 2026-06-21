@@ -1,3 +1,23 @@
+@php
+    $userId = session('utilisateur_id');
+
+    // 1. Récupérer les IDs de toutes les conversations de l'utilisateur (Client ou Freelancer)
+    $myConversationIds = \App\Models\Conversion::where('utilisateur_idutilisateur', $userId)
+        ->orWhereHas('service.prestataire', function ($query) use ($userId) {
+            $query->where('utilisateur_idutilisateur', $userId);
+        })->pluck('idconversion');
+
+    // 2. Récupérer les messages non lus envoyés par l'INTERLOCUTEUR (pas par soi-même)
+    $unreadNotifications = \App\Models\Message::whereIn('conversion_idconversion', $myConversationIds)
+        ->where('utilisateur_idutilisateur', '!=', $userId)
+        ->where('lu', 0)
+        ->orderBy('date_envoi', 'desc')
+        ->get();
+
+    // 3. Compter le nombre de messages non lus
+    $unreadCount = $unreadNotifications->count();
+@endphp
+
 {{-- resources/views/dashboard.blade.php --}}
 <!DOCTYPE html>
 <html lang="{{ session('lang', 'fr') }}" dir="{{ session('lang', 'fr') === 'ar' ? 'rtl' : 'ltr' }}">
@@ -534,6 +554,196 @@
         [dir="rtl"] .check-item { flex-direction: row-reverse; }
         [dir="rtl"] .footer-inner { flex-direction: row-reverse; }
         [dir="rtl"] .user-dropdown a, [dir="rtl"] .user-dropdown button.dd-btn { flex-direction: row-reverse; text-align: right; }
+        /* ================= DROPDOWN NOTIFICATIONS PREMIUM & DYNAMIQUE ================= */
+.notification-container {
+    position: relative;
+    display: inline-block;
+}
+
+.notification-bell {
+    position: relative;
+    background: none;
+    border: none;
+    color: #294D61;
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.notification-bell:hover {
+    color: var(--color-accent);
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.08);
+}
+
+/* --- Animation d'alerte sur la Cloche --- */
+@keyframes cool-shake {
+    0% { transform: rotate(0); }
+    15% { transform: rotate(12deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(8deg); }
+    60% { transform: rotate(-8deg); }
+    75% { transform: rotate(4deg); }
+    100% { transform: rotate(0); }
+}
+
+.bell-has-unread i {
+    animation: cool-shake 2.5s infinite ease-in-out;
+    transform-origin: top center;
+    color: var(--color-accent);
+}
+
+/* --- Badge Rouge qui pulse --- */
+@keyframes modern-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.notification-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #EF4444;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 10px;
+    border: 2px solid var(--color-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modern-pulse 1.8s infinite;
+}
+
+/* --- Menu Déroulant style Glassmorphism (Effet Flou Premium) --- */
+@keyframes dropdown-bounce {
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.notification-dropdown {
+    display: none;
+    position: absolute;
+    right: -10px;
+    top: 100%;
+    margin-top: 12px;
+    width: 340px;
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 20px !important;
+    box-shadow: 0 20px 40px rgba(5, 22, 26, 0.18), 0 5px 15px rgba(12, 171, 168, 0.05) !important;
+    border: 1px solid rgba(12, 171, 168, 0.25) !important;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+/* Ce sélecteur déclenche l'animation dès que le JS applique le display block */
+.notification-dropdown[style*="display: block"] {
+    display: block !important;
+    animation: dropdown-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.notification-header {
+    background: linear-gradient(135deg, var(--color-dark) 0%, #0c434a 100%);
+    color: white;
+    padding: 14px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.notification-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* --- Items de Notification Dynamiques --- */
+.notification-item {
+    display: block;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(109,165,192,0.15);
+    text-decoration: none;
+    color: #05161A;
+    border-left: 0 solid var(--color-accent);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification-item:hover {
+    background: rgba(12, 171, 168, 0.06) !important;
+    border-left: 4px solid var(--color-accent);
+    transform: translateX(4px);
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-sender {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--color-dark);
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+}
+
+.notification-text {
+    font-size: 12.5px;
+    color: #4A5568;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 20px;
+}
+
+.notification-time {
+    font-size: 10.5px;
+    color: #A0AEC0;
+    margin-top: 5px;
+    text-align: right;
+    font-weight: 500;
+}
+
+/* --- État Vide Style "Cool" --- */
+.notification-empty {
+    padding: 35px 20px;
+    text-align: center;
+    color: var(--color-slate);
+    font-size: 13.5px;
+}
+
+.notification-empty i {
+    font-size: 32px;
+    color: var(--color-light);
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.6;
+    transition: transform 0.5s ease;
+}
+
+.notification-container:hover .notification-empty i {
+    transform: scale(1.15) rotate(10deg);
+}
     </style>
 </head>
  
@@ -582,11 +792,50 @@
                 <button type="submit" class="lang-btn {{ session('lang','fr') === 'ar' ? 'active' : '' }}">عربي</button>
             </form>
         </div>
- 
-        <button class="nav-bell" title="{{ session('lang','fr') === 'ar' ? 'الإشعارات' : 'Notifications' }}">
-            <i class="fa-regular fa-bell"></i>
-            <span class="bell-dot"></span>
-        </button>
+            {{-- Notifications icon --}}
+        <div class="notification-container">
+    <button class="notification-bell {{ $unreadCount > 0 ? 'bell-has-unread' : '' }}" id="notificationBellBtn">
+        <i class="fa-solid fa-bell"></i>
+        @if($unreadCount > 0)
+            <span class="notification-badge">{{ $unreadCount }}</span>
+        @endif
+    </button>
+
+    <div class="notification-dropdown" id="notificationDropdownMenu">
+        <div class="notification-header">
+            <span><i class="fa-regular fa-message" style="margin-right: 6px;"></i> Discussions</span>
+            @if($unreadCount > 0)
+                <span style="background: var(--color-accent); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px rgba(12,171,168,0.4);">
+                    {{ $unreadCount }} Nouveau(x)
+                </span>
+            @endif
+        </div>
+        
+        <div class="notification-list">
+            @forelse($unreadNotifications as $notif)
+                <a href="{{ route('messagerie', ['id' => $notif->conversion_idconversion]) }}" class="notification-item">
+                    <div class="notification-sender">
+                        <i class="fa-solid fa-circle shadow-sm" style="color: var(--color-accent); font-size: 8px; margin-right: 12px;"></i>
+                        {{ $notif->expediteur ?? 'Nouveau message' }}
+                    </div>
+                    <div class="notification-text">
+                        {{ Str::limit($notif->contenu, 40) }}
+                    </div>
+                    <div class="notification-time">
+                        <i class="fa-regular fa-clock" style="font-size: 10px; margin-right: 3px;"></i>
+                        {{ \Carbon\Carbon::parse($notif->date_envoi)->diffForHumans() }}
+                    </div>
+                </a>
+            @empty
+                <div class="notification-empty">
+                    <i class="fa-regular fa-bell"></i>
+                    <p style="font-weight: 500;">Votre boîte est à jour !</p>
+                    <span style="font-size: 12px; opacity: 0.7;">Aucun message non lu.</span>
+                </div>
+            @endforelse
+        </div>
+    </div>
+</div>
 
         {{-- User avatar + dropdown --}}
         <div class="user-menu" style="position: relative; display: inline-block;">
@@ -1119,6 +1368,55 @@
             body.style.backgroundColor = ''; 
         }
     }
+//================= SCRIPT NOTIFICATIONS ================= 
+document.addEventListener('DOMContentLoaded', function() {
+    const bellBtn = document.getElementById('notificationBellBtn');
+    const dropdownMenu = document.getElementById('notificationDropdownMenu');
+
+    if (bellBtn && dropdownMenu) {
+        // 1. Ouvrir ou fermer au clic sur la cloche
+        bellBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Empêche le clic de se propager au reste de la page
+            if (dropdownMenu.style.display === 'block') {
+                dropdownMenu.style.display = 'none';
+            } else {
+                dropdownMenu.style.display = 'block';
+            }
+        });
+
+        // 2. Fermer le menu si on clique n'importe où à l'extérieur
+        document.addEventListener('click', function(e) {
+            if (!dropdownMenu.contains(e.target) && !bellBtn.contains(e.target)) {
+                dropdownMenu.style.display = 'none';
+            }
+        });
+
+        // 3. EFFET COOL : Disparition immédiate de la notification au clic
+        const notificationItems = document.querySelectorAll('.notification-item');
+        notificationItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                // Animation de glissement vers la droite et fondu transparent
+                this.style.transition = 'all 0.35s ease-out';
+                this.style.opacity = '0';
+                this.style.transform = 'translateX(40px)';
+                this.style.background = 'rgba(12, 171, 168, 0.1)'; 
+
+                // Mise à jour en temps réel du badge rouge
+                const badge = document.querySelector('.notification-badge');
+                if (badge) {
+                    let currentCount = parseInt(badge.textContent);
+                    if (currentCount > 1) {
+                        badge.textContent = currentCount - 1;
+                    } else {
+                        // S'il ne reste plus de messages non lus, on enlève le badge et la secousse
+                        badge.remove();
+                        bellBtn.classList.remove('bell-has-unread');
+                    }
+                }
+            });
+        });
+    }
+});    
 </script>
  
 </body>

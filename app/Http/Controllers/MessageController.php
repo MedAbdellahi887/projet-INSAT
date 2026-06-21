@@ -11,40 +11,49 @@ use Carbon\Carbon;
 class MessageController extends Controller
 {
     public function index($id = null)
-    {
-        $utilisateur_id = session('utilisateur_id');
-        if (!$utilisateur_id) return redirect()->route('login');
+{
+    $utilisateur_id = session('utilisateur_id');
+    if (!$utilisateur_id) return redirect()->route('login');
 
-        // 1. Mettre à jour la dernière activité de l'utilisateur connecté
-        $utilisateurConnecte = Utilisateur::find($utilisateur_id);
-        if ($utilisateurConnecte) {
-            $utilisateurConnecte->derniere_activite = now();
-            $utilisateurConnecte->save();
-        }
-
-        // Chargement des conversations
-        $conversations = Conversion::where('utilisateur_idutilisateur', $utilisateur_id)
-            ->orWhereHas('service.prestataire', function ($query) use ($utilisateur_id) {
-                $query->where('utilisateur_idutilisateur', $utilisateur_id);
-            })
-            ->with(['utilisateur', 'service.prestataire.utilisateur', 'messages'])
-            ->get();
-
-        $conversationActive = $id ? Conversion::with(['utilisateur', 'service.prestataire.utilisateur', 'messages'])->find($id) : null;
-        $messages = $conversationActive ? $conversationActive->messages : collect();
-
-        // 2. Identifier l'autre interlocuteur dans la conversation active
-        $interlocuteur = null;
-        if ($conversationActive) {
-            if ($conversationActive->utilisateur_idutilisateur == $utilisateur_id) {
-                $interlocuteur = $conversationActive->service->prestataire->utilisateur ?? null;
-            } else {
-                $interlocuteur = $conversationActive->utilisateur ?? null;
-            }
-        }
-
-        return view('auth.messagerie', compact('conversations', 'conversationActive', 'messages', 'utilisateurConnecte', 'interlocuteur'));
+    // 1. Mettre à jour la dernière activité de l'utilisateur connecté
+    $utilisateurConnecte = Utilisateur::find($utilisateur_id);
+    if ($utilisateurConnecte) {
+        $utilisateurConnecte->derniere_activite = now();
+        $utilisateurConnecte->save();
     }
+
+    // Chargement des conversations
+    $conversations = Conversion::where('utilisateur_idutilisateur', $utilisateur_id)
+        ->orWhereHas('service.prestataire', function ($query) use ($utilisateur_id) {
+            $query->where('utilisateur_idutilisateur', $utilisateur_id);
+        })
+        ->with(['utilisateur', 'service.prestataire.utilisateur', 'messages'])
+        ->get();
+
+    $conversationActive = $id ? Conversion::with(['utilisateur', 'service.prestataire.utilisateur', 'messages'])->find($id) : null;
+
+    // 🌟 AJOUT : Si une conversation est ouverte, on marque instantanément les messages de l'AUTRE comme LUS
+    if ($conversationActive) {
+        Message::where('conversion_idconversion', $id)
+            ->where('utilisateur_idutilisateur', '!=', $utilisateur_id)
+            ->where('lu', 0)
+            ->update(['lu' => 1]);
+    }
+
+    $messages = $conversationActive ? $conversationActive->messages : collect();
+
+    // 2. Identifier l'autre interlocuteur dans la conversation active
+    $interlocuteur = null;
+    if ($conversationActive) {
+        if ($conversationActive->utilisateur_idutilisateur == $utilisateur_id) {
+            $interlocuteur = $conversationActive->service->prestataire->utilisateur ?? null;
+        } else {
+            $interlocuteur = $conversationActive->utilisateur ?? null;
+        }
+    }
+
+    return view('auth.messagerie', compact('conversations', 'conversationActive', 'messages', 'utilisateurConnecte', 'interlocuteur'));
+}
 
     public function envoyer(Request $request)
     {
@@ -103,4 +112,5 @@ class MessageController extends Controller
 
         return redirect()->route('messagerie', ['id' => $conversation->idconversion]);
     }
+
 }

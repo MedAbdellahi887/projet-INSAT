@@ -15,7 +15,6 @@ class Message extends Model
     protected $fillable = [
     'contenu',
     'type',
-    'fichier',
     'email',
     'destinataire',
     'expediteur',

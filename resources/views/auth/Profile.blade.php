@@ -345,7 +345,13 @@ body {
     <div class="container">
 
         <div class="profile-header">
-            <div class="avatar">{{ strtoupper(substr($utilisateur->prenom ?? $utilisateur->nom, 0, 1)) }}</div>
+            <div class="avatar" style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                @if($utilisateur && $utilisateur->photo)
+                    <img src="{{ asset('storage/' . $utilisateur->photo) }}" alt="Photo de {{ $utilisateur->prenom }}" style="width: 100%; height: 100%; object-fit: cover;">
+                @else
+                    {{ strtoupper(substr($utilisateur->prenom ?? $utilisateur->nom, 0, 1)) }}
+                @endif
+</div>
             <div class="profile-info">
                 <h1>{{ $utilisateur->prenom }} {{ $utilisateur->nom }}</h1>
                 <p><i class="fa-regular fa-envelope"></i> {{ $utilisateur->email }}</p>

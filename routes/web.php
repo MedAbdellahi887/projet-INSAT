@@ -17,12 +17,10 @@ Route::get('/', function () {
     return view('auth.welcome');
 });
 
-// ======= ROUTE SIMPLE DIRECTE VERS HOME (Nettoyée et unique) =======
+// ======= ROUTE DIRECTE VERS HOME =======
 Route::get('/home', function () {
-    // 1. Récupérer les prestataires avec leurs relations
     $prestataires = \App\Models\prestataire::with(['utilisateur', 'skills', 'services'])->get();
 
-    // 2. Transformer les données
     $freelancersData = $prestataires->map(function ($p) {
         $colors = ['#52D6F4', '#7B61FF', '#45C486', '#F59E0B', '#FF7AA8', '#FF6B6B', '#35C4E6', '#8B7BFF'];
         $color = $colors[$p->idprestataire % count($colors)];
@@ -33,14 +31,16 @@ Route::get('/home', function () {
 
         return [
             'id'       => $p->idprestataire,
+            'user_id'  => $p->utilisateur->idutilisateur ?? null,   // ← AJOUTER
             'name'     => $name,
+            'avatar'   => ($p->utilisateur && $p->utilisateur->photo) ? asset('storage/' . $p->utilisateur->photo) : null,
             'role'     => $firstService ? $firstService->titre : $p->type_prestataire,
             'type'     => ($p->utilisateur->role ?? '') === 'freelancer' && ($p->niveau ?? '') === 'etudiant' ? 'etudiant' : 'pro',
             'category' => $p->type_prestataire ?? 'Développement',
             'tags'     => $p->skills->pluck('nom')->toArray() ?: [$p->type_prestataire ?? 'Freelancer'],
             'desc'     => $firstService ? $firstService->description : "Prestataire de services.",
             'rating'   => '⭐ ' . number_format($p->note_moyenne ?? 5.0, 1) . ' (' . (($p->idprestataire * 7) % 30 + 12) . ')',
-            'price'    => 'À partir de ' . number_format($firstService ? $firstService->prix_base : 5000, 0, ',', ' ') . ' MRU',
+            'price'    => number_format($firstService ? $firstService->prix_base : 5000, 0, ',', ' ') . ' MRU',
             'color'    => $color,
             'service_id' => $firstService ? $firstService->idservice : null,
             'membre_depuis' => $p->utilisateur && $p->utilisateur->date_inscription
@@ -49,7 +49,6 @@ Route::get('/home', function () {
         ];
     });
 
-    // 3. Charger le fichier Projet.blade.php avec les données
     return view('auth.Projet', compact('freelancersData'));
 })->name('home');
 
@@ -93,7 +92,7 @@ Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'send'])->name('contact.send');
 Route::post('/contact/reply', [ContactController::class, 'reply'])->name('contact.reply');
 
-// ================= DASHBOARDS CORRIGÉS =================
+// ================= ROUTE VERS FREELANCER DASHBOARDS  =================
 Route::get('/dashboard', function () {
     if (!session('utilisateur_id')) {
         return redirect()->route('login');
@@ -107,14 +106,16 @@ Route::get('/dashboard', function () {
     return view('auth.dashboard');
 })->name('dashboard');
 
+// ================= ROUTE VERS CLIENT DASHBOARD =================
 Route::get('/client-dashboard', function () {
     if (!session('utilisateur_id')) {
         return redirect()->route('login');
     }
 
-    // OBLIGATOIRE : On injecte les vrais prestataires pour que ta liste du bas s'affiche !
+    // 1. OBLIGATOIRE : On ajoute 'utilisateur' dans le "with" pour récupérer la photo de profil
     $prestataires = \App\Models\prestataire::with(['utilisateur', 'services'])->get();
 
+    // 2. Transformer les données de manière identique à la page Projet
     $freelancersData = $prestataires->map(function ($p) {
         $colors = ['#52D6F4', '#7B61FF', '#45C486', '#F59E0B', '#FF7AA8', '#FF6B6B', '#35C4E6', '#8B7BFF'];
         $color = $colors[$p->idprestataire % count($colors)];
@@ -123,13 +124,15 @@ Route::get('/client-dashboard', function () {
         $name = trim(($p->utilisateur->prenom ?? '') . ' ' . ($p->utilisateur->nom ?? ''));
         if (empty($name)) { $name = "Prestataire #" . $p->idprestataire; }
 
-       return [
+        return [
             'id'         => $p->idprestataire,
+            'user_id'    => $p->utilisateur->idutilisateur ?? null,   // ← AJOUTER
             'name'       => $name,
+            'avatar'     => ($p->utilisateur && $p->utilisateur->photo) ? asset('storage/' . $p->utilisateur->photo) : null,
             'role'       => $firstService ? $firstService->titre : $p->type_prestataire,
             'category'   => $p->type_prestataire ?? 'Développement',
             'desc'       => $firstService ? $firstService->description : 'Aucune description disponible pour le moment.',
-            'price'      => $firstService ? $firstService->prix_base : '1500',
+            'price'      => number_format($firstService ? $firstService->prix_base : 1500, 0, ',', ' ') . ' MRU',
             'color'      => $color,
             'service_id' => $firstService ? $firstService->idservice : null,
         ];
@@ -137,6 +140,8 @@ Route::get('/client-dashboard', function () {
 
     return view('auth.client-dashboard', compact('freelancersData'));
 })->name('client.dashboard');
+
+
 
 // ================= PUBLICATION ET SUPPRESSION DE PROJET =================
 Route::post('/publier-projet', function (\Illuminate\Http\Request $request) {
@@ -206,3 +211,4 @@ Route::post('/profile/update-photo', [UtilisateurController::class, 'updatePhoto
 
 // Route pour le Dashboard Freelancer (profile.update.photo)
 Route::post('/profile/update-photo-freelancer', [UtilisateurController::class, 'updatePhoto'])->name('profile.update.photo');
+

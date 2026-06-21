@@ -4,6 +4,24 @@
     
     // 2. Compter ses projets réels via la table conversion (qui possède bien 'utilisateur_idutilisateur')
     $nombreProjets = \App\Models\Conversion::where('utilisateur_idutilisateur', session('utilisateur_id'))->count(); 
+
+    $userId = session('utilisateur_id');
+
+    // 1. Récupérer les IDs de toutes les conversations de l'utilisateur (Client ou Freelancer)
+    $myConversationIds = \App\Models\Conversion::where('utilisateur_idutilisateur', $userId)
+        ->orWhereHas('service.prestataire', function ($query) use ($userId) {
+            $query->where('utilisateur_idutilisateur', $userId);
+        })->pluck('idconversion');
+
+    // 2. Récupérer les messages non lus envoyés par l'INTERLOCUTEUR (pas par soi-même)
+    $unreadNotifications = \App\Models\Message::whereIn('conversion_idconversion', $myConversationIds)
+        ->where('utilisateur_idutilisateur', '!=', $userId)
+        ->where('lu', 0)
+        ->orderBy('date_envoi', 'desc')
+        ->get();
+
+    // 3. Compter le nombre de messages non lus
+    $unreadCount = $unreadNotifications->count();
 @endphp
 
 {{-- resources/views/client/dashboard.blade.php --}}
@@ -689,6 +707,196 @@
         [dir="rtl"] .user-dropdown a, [dir="rtl"] .user-dropdown button.dd-btn { flex-direction: row-reverse; text-align: right; }
         [dir="rtl"] .project-card, [dir="rtl"] .msg-item { flex-direction: row-reverse; text-align: right; }
         [dir="rtl"] .msg-item:hover { padding-left: 25px; padding-right: 30px; border-left: none; border-right: 4px solid var(--blue); }
+        /* ================= DROPDOWN NOTIFICATIONS PREMIUM & DYNAMIQUE ================= */
+.notification-container {
+    position: relative;
+    display: inline-block;
+}
+
+.notification-bell {
+    position: relative;
+    background: none;
+    border: none;
+    color: #294D61;
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.notification-bell:hover {
+    color: var(--color-accent);
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.08);
+}
+
+/* --- Animation d'alerte sur la Cloche --- */
+@keyframes cool-shake {
+    0% { transform: rotate(0); }
+    15% { transform: rotate(12deg); }
+    30% { transform: rotate(-12deg); }
+    45% { transform: rotate(8deg); }
+    60% { transform: rotate(-8deg); }
+    75% { transform: rotate(4deg); }
+    100% { transform: rotate(0); }
+}
+
+.bell-has-unread i {
+    animation: cool-shake 2.5s infinite ease-in-out;
+    transform-origin: top center;
+    color: var(--color-accent);
+}
+
+/* --- Badge Rouge qui pulse --- */
+@keyframes modern-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.notification-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #EF4444;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 10px;
+    border: 2px solid var(--color-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modern-pulse 1.8s infinite;
+}
+
+/* --- Menu Déroulant style Glassmorphism (Effet Flou Premium) --- */
+@keyframes dropdown-bounce {
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.notification-dropdown {
+    display: none;
+    position: absolute;
+    right: -10px;
+    top: 100%;
+    margin-top: 12px;
+    width: 340px;
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 20px !important;
+    box-shadow: 0 20px 40px rgba(5, 22, 26, 0.18), 0 5px 15px rgba(12, 171, 168, 0.05) !important;
+    border: 1px solid rgba(12, 171, 168, 0.25) !important;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+/* Ce sélecteur déclenche l'animation dès que le JS applique le display block */
+.notification-dropdown[style*="display: block"] {
+    display: block !important;
+    animation: dropdown-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.notification-header {
+    background: linear-gradient(135deg, var(--color-dark) 0%, #0c434a 100%);
+    color: white;
+    padding: 14px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.notification-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* --- Items de Notification Dynamiques --- */
+.notification-item {
+    display: block;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(109,165,192,0.15);
+    text-decoration: none;
+    color: #05161A;
+    border-left: 0 solid var(--color-accent);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification-item:hover {
+    background: rgba(12, 171, 168, 0.06) !important;
+    border-left: 4px solid var(--color-accent);
+    transform: translateX(4px);
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-sender {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--color-dark);
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+}
+
+.notification-text {
+    font-size: 12.5px;
+    color: #4A5568;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 20px;
+}
+
+.notification-time {
+    font-size: 10.5px;
+    color: #A0AEC0;
+    margin-top: 5px;
+    text-align: right;
+    font-weight: 500;
+}
+
+/* --- État Vide Style "Cool" --- */
+.notification-empty {
+    padding: 35px 20px;
+    text-align: center;
+    color: var(--color-slate);
+    font-size: 13.5px;
+}
+
+.notification-empty i {
+    font-size: 32px;
+    color: var(--color-light);
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.6;
+    transition: transform 0.5s ease;
+}
+
+.notification-container:hover .notification-empty i {
+    transform: scale(1.15) rotate(10deg);
+}
     </style>
 
 </head>
@@ -749,12 +957,50 @@
             <i class="fa-solid fa-comments" style="color: var(--blue2); font-size: 20px;"></i>
             <span>{{ session('lang','fr') === 'ar' ? 'الرسائل' : 'Ma Messagerie' }}</span>
         </a>
+        {{-- Notifications icon --}}
+        <div class="notification-container">
+    <button class="notification-bell {{ $unreadCount > 0 ? 'bell-has-unread' : '' }}" id="notificationBellBtn">
+        <i class="fa-solid fa-bell"></i>
+        @if($unreadCount > 0)
+            <span class="notification-badge">{{ $unreadCount }}</span>
+        @endif
+    </button>
 
-        {{-- Notification bell --}}
-        <button class="nav-bell" title="{{ session('lang','fr') === 'ar' ? 'الإشعارات' : 'Notifications' }}">
-            <i class="fa-regular fa-bell"></i>
-            <span class="bell-dot"></span>
-        </button>
+    <div class="notification-dropdown" id="notificationDropdownMenu">
+        <div class="notification-header">
+            <span><i class="fa-regular fa-message" style="margin-right: 6px;"></i> Discussions</span>
+            @if($unreadCount > 0)
+                <span style="background: var(--color-accent); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px rgba(12,171,168,0.4);">
+                    {{ $unreadCount }} Nouveau(x)
+                </span>
+            @endif
+        </div>
+        
+        <div class="notification-list">
+            @forelse($unreadNotifications as $notif)
+                <a href="{{ route('messagerie', ['id' => $notif->conversion_idconversion]) }}" class="notification-item">
+                    <div class="notification-sender">
+                        <i class="fa-solid fa-circle shadow-sm" style="color: var(--color-accent); font-size: 8px; margin-right: 12px;"></i>
+                        {{ $notif->expediteur ?? 'Nouveau message' }}
+                    </div>
+                    <div class="notification-text">
+                        {{ Str::limit($notif->contenu, 40) }}
+                    </div>
+                    <div class="notification-time">
+                        <i class="fa-regular fa-clock" style="font-size: 10px; margin-right: 3px;"></i>
+                        {{ \Carbon\Carbon::parse($notif->date_envoi)->diffForHumans() }}
+                    </div>
+                </a>
+            @empty
+                <div class="notification-empty">
+                    <i class="fa-regular fa-bell"></i>
+                    <p style="font-weight: 500;">Votre boîte est à jour !</p>
+                    <span style="font-size: 12px; opacity: 0.7;">Aucun message non lu.</span>
+                </div>
+            @endforelse
+        </div>
+    </div>
+</div>
 
         {{-- User avatar + dropdown --}}
         <div class="user-menu" style="position: relative; display: inline-block;">
@@ -1224,58 +1470,81 @@
     </div>
 </footer>
 
-<div id="section-freelancers" style="margin-top: 50px; margin-bottom: 50px; padding: 0 30px;">
-    <h3 style="color: var(--dark); font-weight: 700; font-size: 22px; margin-bottom: 25px;">
-        {{ session('lang','fr') === 'ar' ? 'المستقلون المتاحون' : ' Freelancers Disponibles' }}
-    </h3>
+<div id="section-freelancers" style="margin-top: 50px; margin-bottom: 50px; padding: 0 10px;">
+    <div class="section-label">
+        {{ session('lang','fr') === 'ar' ? 'المستقلون المتاحون' : 'Freelancers recommandés' }}
+    </div>
+    <div class="section-header" style="margin-bottom: 25px;">
+        <h2>
+            <i class="fa-solid fa-user-tie" style="color:var(--purple, #7B61FF); font-size:22px;"></i>
+            {{ session('lang','fr') === 'ar' ? 'المستقلون المتاحون' : 'Freelancers Disponibles' }}
+        </h2>
+    </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
-        @forelse($freelancersData as $freelancer)
-            <div style="background: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px rgba(27, 37, 89, 0.02); border: 1px solid #E9EDF7; display: flex; flex-direction: column; justify-content: space-between; min-height: 240px;">
-                
-                <div>
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
-                        <div style="width: 48px; height: 48px; border-radius: 50%; background-color: {{ $freelancer['color'] }}; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">
-                            {{ strtoupper(substr($freelancer['name'], 0, 1)) }}
-                        </div>
-                        <div>
-                            <h4 style="color: var(--dark); font-weight: 700; font-size: 15px; margin: 0;">{{ $freelancer['name'] }}</h4>
-                            <span style="color: #8A94A6; font-size: 12px;">{{ $freelancer['category'] }}</span>
-                        </div>
-                    </div>
+<div class="freelancers-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
+    @forelse($freelancersData as $freelancer)
+    <div class="fl-card"
+         @if(!empty($freelancer['user_id']))
+             onclick="window.location.href='{{ route('profil.show', $freelancer['user_id']) }}'"
+             style="background: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px rgba(27, 37, 89, 0.02); border: 1px solid #E9EDF7; display: flex; flex-direction: column; justify-content: space-between; min-height: 250px; cursor: pointer;"
+         @else
+             style="background: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px rgba(27, 37, 89, 0.02); border: 1px solid #E9EDF7; display: flex; flex-direction: column; justify-content: space-between; min-height: 250px;"
+         @endif
+    >
 
-                    <h5 style="color: var(--purple); font-weight: 600; font-size: 14px; margin-bottom: 8px;">{{ $freelancer['role'] }}</h5>
-                    <p style="color: #64748B; font-size: 13px; line-height: 1.5; margin-bottom: 20px; height: 58px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
-                        {{ $freelancer['desc'] }}
-                    </p>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #F4F7FB; padding-top: 15px;">
-                    <div>
-                        <span style="color: #8A94A6; font-size: 11px; display: block;">{{ session('lang','fr') === 'ar' ? 'السعر يبدأ من' : 'À partir de' }}</span>
-                        <span style="color: var(--dark); font-weight: 700; font-size: 16px;">{{ $freelancer['price'] }} MRU</span>
-                    </div>
-
-                    @if(isset($freelancer['service_id']) && $freelancer['service_id'])
-                        <a href="{{ route('messagerie.demarrer', ['service_id' => $freelancer['service_id']]) }}" 
-                           style="background-color: var(--purple); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; text-decoration: none; display: flex; align-items: center; gap: 6px;">
-                            <i class="fa-solid fa-paper-plane"></i>
-                            {{ session('lang','fr') === 'ar' ? 'تواصل' : 'Contacter' }}
-                        </a>
+        <div>
+            <div class="fl-head">
+                <div class="fl-av" style="background: linear-gradient(135deg, var(--blue), var(--purple)); overflow: hidden;">
+                    @if(!empty($freelancer['photo']))
+                        <img src="{{ asset('storage/' . $freelancer['photo']) }}" alt="{{ $freelancer['name'] }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 18px;">
                     @else
-                        <button disabled style="background-color: #E9EDF7; color: #8A94A6; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: not-allowed;">
-                            {{ session('lang','fr') === 'ar' ? 'غير متاح' : 'Indisponible' }}
-                        </button>
+                        {{ strtoupper(substr($freelancer['name'] ?? '?', 0, 1)) }}
                     @endif
                 </div>
+                <div class="fl-meta">
+                    <h4 style="color: var(--dark); font-weight: 700; font-size: 15px; margin: 0;">{{ $freelancer['name'] }}</h4>
+                    <span style="color: #8A94A6; font-size: 12px;">{{ $freelancer['category'] }}</span>
+                </div>
+            </div>
 
+            <h5 style="color: var(--purple, #7B61FF); font-weight: 600; font-size: 14px; margin-bottom: 8px; margin-top: 0;">{{ $freelancer['role'] }}</h5>
+            <p class="fl-desc" style="color: #64748B; font-size: 13px; line-height: 1.5; margin-bottom: 20px; height: 58px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                {{ $freelancer['desc'] }}
+            </p>
+        </div>
+
+        <div class="fl-footer-row" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #F4F7FB; padding-top: 15px; margin-top: auto; gap: 15px;">
+            <div style="flex-grow: 1; min-width: 0; padding-right: 10px;">
+                <span style="color: #8A94A6; font-size: 11px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ session('lang','fr') === 'ar' ? 'السعر يبدأ من' : 'À partir de' }}
+                </span>
+                <span class="fl-price" style="color: var(--dark); font-weight: 700; font-size: 16px; white-space: nowrap;">
+                    {{ $freelancer['price'] }}
+                </span>
             </div>
-        @empty
-            <div style="grid-column: 1 / -1; text-align: center; color: #8A94A6; padding: 40px;">
-                {{ session('lang','fr') === 'ar' ? 'لا يوجد مستقلين متاحين حالياً.' : 'Aucun freelancer disponible pour le moment.' }}
-            </div>
-        @endforelse
+
+            @if(!empty($freelancer['service_id']))
+                <a href="{{ route('messagerie.demarrer', ['service_id' => $freelancer['service_id']]) }}"
+                    onclick="event.stopPropagation()"
+                    class="btn-contact"
+                    style="background-color: var(--purple, #7B61FF); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 120px; min-width: 120px; box-sizing: border-box; text-align: center;">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>{{ session('lang','fr') === 'ar' ? 'تواصل' : 'Contacter' }}</span>
+                </a>
+            @else
+                <button disabled
+                   style="background-color: #E9EDF7; color: #8A94A6; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 120px; min-width: 120px; box-sizing: border-box; text-align: center;">
+                    <span>{{ session('lang','fr') === 'ar' ? 'غير متاح' : 'Indisponible' }}</span>
+                </button>
+            @endif
+        </div>
+
     </div>
+    @empty
+        <div style="grid-column: 1 / -1; text-align: center; color: #8A94A6; padding: 40px;">
+            {{ session('lang','fr') === 'ar' ? 'لا يوجد مستقلين متاحين حالياً.' : 'Aucun freelancer disponible pour le moment.' }}
+        </div>
+    @endforelse
 </div>
 
 {{-- PHOTO UPLOAD MODAL --}}
@@ -1291,7 +1560,7 @@
             {{ session('lang','fr') === 'ar' ? 'اختر صورة واضحة لملفك الشخصي' : 'Choisissez une photo claire pour votre profil' }}
         </p>
         
-        <form action="{{ route('profile.update.photo') }}" method="POST" enctype="multipart/form-data" id="laravelPhotoForm">
+        <form action="{{ route('profil.photo.update') }}" method="POST" enctype="multipart/form-data" id="laravelPhotoForm">
             @csrf
             <label for="photoInput" style="display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px dashed #E5E7EB; border-radius:14px; padding:24px; cursor:pointer; margin-bottom:18px; transition:border-color 0.2s; gap:8px;" onmouseover="this.style.borderColor='var(--color-mid, #0F929C)'" onmouseout="this.style.borderColor='#E5E7EB'">
                 <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px; color:var(--color-mid, #0F929C);"></i>
@@ -1429,6 +1698,56 @@ function toggleDarkModeEffect(event) {
         body.style.backgroundColor = ''; 
     }
 }
+
+//================= SCRIPT NOTIFICATIONS ================= 
+document.addEventListener('DOMContentLoaded', function() {
+    const bellBtn = document.getElementById('notificationBellBtn');
+    const dropdownMenu = document.getElementById('notificationDropdownMenu');
+
+    if (bellBtn && dropdownMenu) {
+        // 1. Ouvrir ou fermer au clic sur la cloche
+        bellBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Empêche le clic de se propager au reste de la page
+            if (dropdownMenu.style.display === 'block') {
+                dropdownMenu.style.display = 'none';
+            } else {
+                dropdownMenu.style.display = 'block';
+            }
+        });
+
+        // 2. Fermer le menu si on clique n'importe où à l'extérieur
+        document.addEventListener('click', function(e) {
+            if (!dropdownMenu.contains(e.target) && !bellBtn.contains(e.target)) {
+                dropdownMenu.style.display = 'none';
+            }
+        });
+
+        // 3. EFFET COOL : Disparition immédiate de la notification au clic
+        const notificationItems = document.querySelectorAll('.notification-item');
+        notificationItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                // Animation de glissement vers la droite et fondu transparent
+                this.style.transition = 'all 0.35s ease-out';
+                this.style.opacity = '0';
+                this.style.transform = 'translateX(40px)';
+                this.style.background = 'rgba(12, 171, 168, 0.1)'; 
+
+                // Mise à jour en temps réel du badge rouge
+                const badge = document.querySelector('.notification-badge');
+                if (badge) {
+                    let currentCount = parseInt(badge.textContent);
+                    if (currentCount > 1) {
+                        badge.textContent = currentCount - 1;
+                    } else {
+                        // S'il ne reste plus de messages non lus, on enlève le badge et la secousse
+                        badge.remove();
+                        bellBtn.classList.remove('bell-has-unread');
+                    }
+                }
+            });
+        });
+    }
+});
 </script>
 
 </body>

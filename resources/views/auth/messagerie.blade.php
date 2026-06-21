@@ -465,31 +465,41 @@ body::after {
             </div>
         </div>
 
-        <div class="conv-list">
-            @forelse($conversations as $conv)
-                @php
-                    $estClient       = ($conv->utilisateur_idutilisateur == $utilisateurConnecte->idutilisateur);
-                    $interlocuteur   = $estClient ? ($conv->service->prestataire->utilisateur ?? null) : $conv->utilisateur;
-                    $nomInterlocuteur = $interlocuteur ? ($interlocuteur->prenom . ' ' . $interlocuteur->nom) : 'Utilisateur';
-                    $initiale         = mb_strtoupper(mb_substr($nomInterlocuteur, 0, 1));
-                    $_avClasses       = ['av-purple','av-blue','av-green','av-rose'];
-                    $avatarClass      = $_avClasses[abs(crc32($nomInterlocuteur)) % 4];
-                @endphp
-                <a href="{{ route('messagerie', ['id' => $conv->idconversion]) }}"
-                   class="conv-item {{ (isset($conversationActive) && $conversationActive->idconversion == $conv->idconversion) ? 'active' : '' }}">
-                    <div class="conv-av {{ $avatarClass }}">{{ $initiale }}</div>
-                    <div class="conv-meta">
-                        <div class="conv-name">{{ $nomInterlocuteur }}</div>
-                        <div class="conv-role">{{ $estClient ? 'Prestataire' : 'Client' }}</div>
-                    </div>
-                </a>
-            @empty
-                <div class="conv-empty">
-                    <i class="fa-regular fa-comment-dots"></i>
-                    Aucune discussion pour le moment.
-                </div>
-            @endforelse
+<div class="conv-list">
+    @forelse($conversations as $conv)
+        @php
+            $estClient       = ($conv->utilisateur_idutilisateur == $utilisateurConnecte->idutilisateur);
+            $interlocuteur   = $estClient ? ($conv->service->prestataire->utilisateur ?? null) : $conv->utilisateur;
+            $nomInterlocuteur = $interlocuteur ? ($interlocuteur->prenom . ' ' . $interlocuteur->nom) : 'Utilisateur';
+            $initiale         = mb_strtoupper(mb_substr($nomInterlocuteur, 0, 1));
+            $_avClasses       = ['av-purple','av-blue','av-green','av-rose'];
+            $avatarClass      = $_avClasses[abs(crc32($nomInterlocuteur)) % 4];
+        @endphp
+        <a href="{{ route('messagerie', ['id' => $conv->idconversion]) }}"
+           class="conv-item {{ (isset($conversationActive) && $conversationActive->idconversion == $conv->idconversion) ? 'active' : '' }}">
+            
+            {{-- Affichage de la photo ou de l'initiale par défaut --}}
+            @if($interlocuteur && $interlocuteur->photo)
+                <img src="{{ asset('storage/' . $interlocuteur->photo) }}" 
+                     class="conv-av" 
+                     style="object-fit: cover; border-radius: 50%;" 
+                     alt="Photo de {{ $nomInterlocuteur }}">
+            @else
+                <div class="conv-av {{ $avatarClass }}">{{ $initiale }}</div>
+            @endif
+            
+            <div class="conv-meta">
+                <div class="conv-name">{{ $nomInterlocuteur }}</div>
+                <div class="conv-role">{{ $estClient ? 'Prestataire' : 'Client' }}</div>
+            </div>
+        </a>
+    @empty
+        <div class="conv-empty">
+            <i class="fa-regular fa-comment-dots"></i>
+            Aucune discussion pour le moment.
         </div>
+    @endforelse
+</div>
 
     </aside>
 
@@ -524,27 +534,36 @@ body::after {
                 @endphp
 
                 <div class="chat-hd">
-                    <div class="chat-hd-av av-purple">
-                        {{ strtoupper(substr($nomInterlocuteur, 0, 1)) }}
-                    </div>
-                    <div class="chat-hd-info">
-                        <div class="chat-hd-name">{{ $nomInterlocuteur }}</div>
-                        <div class="chat-hd-status">
-                            @if($enLigne)
-                                <span class="status-dot" style="background: var(--c-green);"></span> En ligne
-                            @else
-                                <span class="status-dot" style="background: #94a3b8;"></span> 
-                                <span style="color: #64748b;">
-                                    @if($interlocuteur && $interlocuteur->derniere_activite)
-                                        Dernière connexion : {{ \Carbon\Carbon::parse($interlocuteur->derniere_activite)->diffForHumans() }}
-                                    @else
-                                        Déconnecté
-                                    @endif
-                                </span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
+    {{-- MODIFICATION ICI : Affichage de la photo ou de l'initiale par défaut --}}
+    @if($interlocuteur && $interlocuteur->photo)
+        <img src="{{ asset('storage/' . $interlocuteur->photo) }}" 
+             class="chat-hd-av" 
+             style="object-fit: cover; border-radius: 50%;" 
+             alt="Photo de {{ $nomInterlocuteur }}">
+    @else
+        <div class="chat-hd-av av-purple">
+            {{ strtoupper(substr($nomInterlocuteur, 0, 1)) }}
+        </div>
+    @endif
+    
+    <div class="chat-hd-info">
+        <div class="chat-hd-name">{{ $nomInterlocuteur }}</div>
+        <div class="chat-hd-status">
+            @if($enLigne)
+                <span class="status-dot" style="background: var(--c-green);"></span> En ligne
+            @else
+                <span class="status-dot" style="background: #94a3b8;"></span> 
+                <span style="color: #64748b;">
+                    @if($interlocuteur && $interlocuteur->derniere_activite)
+                        Dernière connexion : {{ \Carbon\Carbon::parse($interlocuteur->derniere_activite)->diffForHumans() }}
+                    @else
+                        Déconnecté
+                    @endif
+                </span>
+            @endif
+        </div>
+    </div>
+</div>
             @endif
 
             {{-- Messages --}}
@@ -558,7 +577,24 @@ body::after {
                                     <i class="fa-solid fa-file-lines"></i> Rapport
                                 </span></div>
                             @endif
-                            <div>{{ $msg->contenu }}</div>
+                            
+                            @if($msg->contenu)
+                                <div>{{ $msg->contenu }}</div>
+                            @endif
+
+                            {{-- 🌟 AFFICHAGE DE LA PIÈCE JOINTE SI ELLE EXISTE --}}
+                            @if($msg->fichier)
+                                <div class="message-attachment" style="margin-top: 8px;">
+                                    <a href="{{ asset('storage/' . $msg->fichier) }}" target="_blank" 
+                                       style="display: inline-flex; align-items: center; gap: 8px; background: rgba(0, 0, 0, 0.06); padding: 8px 14px; border-radius: 10px; color: inherit; text-decoration: none; font-size: 13px; border: 1px solid rgba(0,0,0,0.08); transition: background 0.2s;"
+                                       onmouseover="this.style.background='rgba(0,0,0,0.1)'" 
+                                       onmouseout="this.style.background='rgba(0,0,0,0.06)'">
+                                        <i class="fa-solid fa-file-lines" style="font-size: 16px;"></i>
+                                        <span style="font-weight: 500;">Fichier joint</span>
+                                        <i class="fa-solid fa-download" style="font-size: 12px; opacity: 0.8; margin-left: 4px;"></i>
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                         <span class="bubble-time">{{ \Carbon\Carbon::parse($msg->date_envoi)->format('H:i') }}</span>
                     </div>
@@ -605,11 +641,18 @@ body::after {
 
             {{-- Input bar --}}
             <div class="chat-input-bar">
-                <form action="{{ route('messagerie.envoyer') }}" method="POST">
+                <form action="{{ route('messagerie.envoyer') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="conversation_id" value="{{ $conversationActive->idconversion }}">
-                    <div class="input-row">
-                        <input type="text" name="contenu" placeholder="Écrivez votre message..." required autocomplete="off">
+                    <div class="input-row" style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                        
+                        <label for="file-upload" class="btn-file-label" style="cursor: pointer; padding: 10px 14px; background: rgba(12, 171, 168, 0.1); color: var(--c-accent, #0CABA8); border-radius: 12px; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-paperclip" style="font-size: 18px;"></i>
+                        </label>
+                        <input id="file-upload" type="file" name="fichier" style="display: none;" onchange="updateFileIndicator(this)">
+
+                        <input type="text" name="contenu" id="message-text-input" placeholder="Écrivez votre message..." required autocomplete="off" style="flex: 1;">
+                        
                         <button class="btn-send btn-send-msg" type="submit" name="type" value="texte">
                             <i class="fa-solid fa-paper-plane"></i> Envoyer
                         </button>
@@ -618,6 +661,11 @@ body::after {
                                 <i class="fa-solid fa-file-lines"></i> Rapport
                             </button>
                         @endif
+                    </div>
+                    
+                    <div id="file-chosen-indicator" style="display: none; font-size: 12px; color: #0CABA8; margin-top: 5px; padding-left: 50px; font-weight: 500;">
+                        <i class="fa-solid fa-file-arrow-up"></i> <span id="file-name-text"></span>
+                        <i class="fa-solid fa-xmark" style="color: #ef4444; margin-left: 10px; cursor: pointer;" onclick="cancelFileSelection()"></i>
                     </div>
                 </form>
             </div>
@@ -637,6 +685,34 @@ body::after {
 <script>
     var chatBox = document.getElementById("chatBox");
     if (chatBox) { chatBox.scrollTop = chatBox.scrollHeight; }
+    
+    // ========================================================
+    // GESTION DE LA SÉLECTION DE FICHIER DANS LA MESSAGERIE
+    // ========================================================
+    function updateFileIndicator(input) {
+        const indicator = document.getElementById('file-chosen-indicator');
+        const nameText = document.getElementById('file-name-text');
+        const textInput = document.getElementById('message-text-input');
+    
+        if (input.files && input.files.length > 0) {
+            // Remplir le texte avec le nom du fichier choisi
+            nameText.textContent = input.files[0].name;
+            // Rendre la petite barre d'indicateur visible
+            indicator.style.display = 'block';
+            // Comme un fichier est joint, l'utilisateur peut l'envoyer sans texte obligatoire
+            textInput.removeAttribute('required');
+        }
+    }   
+
+    function cancelFileSelection() {
+        const input = document.getElementById('file-upload');
+        const indicator = document.getElementById('file-chosen-indicator');
+        const textInput = document.getElementById('message-text-input');
+    
+        input.value = ""; // Réinitialise l'input file (vide le fichier choisi)
+        indicator.style.display = 'none'; // Cache l'indicateur
+        textInput.setAttribute('required', 'required'); // Réimpose l'obligation d'écrire un message si pas de fichier
+    }
 </script>
 </body>
 </html>
