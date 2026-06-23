@@ -10,39 +10,130 @@ class PrestataireController extends Controller
     // Cette fonction permet d'enregistrer le profil d'un nouveau prestataire
     public function devenirPrestataire(Request $request)
     {
-        // 1. Validation de sécurité pour s'assurer que le type de prestataire est bien envoyé
         $request->validate([
             'type_prestataire' => 'required|string|max:255',
         ]);
 
-        // 2. On prépare une nouvelle ligne vide dans la table 'prestataire'
-        $prestataire = new Prestataire();
-
-        // On remplit avec les données du formulaire ou des valeurs par défaut
-        $prestataire->type_prestataire = $request->input('type_prestataire'); // ex: Développeur, Designer...
-        
-        // On définit des valeurs de départ automatiques pour un nouveau prestataire
-        $prestataire->niveau = 'Debutant'; 
-        $prestataire->note_moyenne = 0.0;     // Pas encore de note au début
-        $prestataire->inscription_payee = 0;  // 0 = non payé par défaut (si c'est un abonnement/frais)
-
-        // ================= CORRECTION SÉCURISÉE ICI =================
-        // Au lieu de chercher dans le formulaire ($request), on prend l'ID de l'utilisateur connecté en session
         $idConnecte = session('utilisateur_id');
 
-        // Sécurité supplémentaire : si la session s'est déconnectée entre temps
         if (!$idConnecte) {
             return redirect()->route('login')->withErrors(['code' => 'Votre session a expiré. Veuillez vous reconnecter.']);
         }
 
-        $prestataire->utilisateur_idutilisateur = $idConnecte;
-        // ============================================================
+        // On cherche d'abord si un profil prestataire existe déjà (créé automatiquement à l'inscription)
+        $prestataire = Prestataire::where('utilisateur_idutilisateur', $idConnecte)->first();
 
-        // 3. On sauvegarde dans la base de données
-        $prestataire->save();
+        if ($prestataire) {
+            // Profil déjà existant → on le MET À JOUR (pas de doublon)
+            $prestataire->type_prestataire = $request->input('type_prestataire');
+            $prestataire->niveau           = $request->input('niveau', $prestataire->niveau ?? 'junior');
+            $prestataire->bio              = $request->input('bio', $prestataire->bio);
+            $prestataire->save();
+        } else {
+            // Pas encore de profil → on en crée un nouveau
+            $prestataire = new Prestataire();
+            $prestataire->type_prestataire          = $request->input('type_prestataire');
+            $prestataire->niveau                    = $request->input('niveau', 'junior');
+            $prestataire->note_moyenne              = 5.0;
+            $prestataire->inscription_payee         = 0;
+            $prestataire->utilisateur_idutilisateur = $idConnecte;
+            $prestataire->bio                       = $request->input('bio');
+            $prestataire->save();
+        }
 
-        // 4. Redirection propre vers le dashboard avec un message flash de succès
+        // Créer ou mettre à jour le service avec le VRAI prix entré par l'utilisateur
+        $premierService = \App\Models\Service::where('prestataire_idprestataire', $prestataire->idprestataire)->first();
+
+        if ($premierService) {
+            // Service existe → on le met à jour avec le vrai prix
+            if ($request->filled('titre')) $premierService->titre = $request->input('titre');
+            if ($request->filled('description')) $premierService->description = $request->input('description');
+            if ($request->filled('prix_base')) $premierService->prix_base = $request->input('prix_base');
+            $premierService->save();
+        } elseif ($request->filled('titre')) {
+            // Pas encore de service → on en crée un avec le vrai prix
+            \App\Models\Service::create([
+                'titre'                     => $request->input('titre'),
+                'description'               => $request->input('description', ''),
+                'prix_base'                 => $request->input('prix_base', 0),
+                'actif'                     => 1,
+                'date_creation'             => now()->format('Y-m-d'),
+                'prestataire_idprestataire' => $prestataire->idprestataire,
+                'niveau_vendeur'            => $prestataire->niveau ?? 'junior',
+                'skills_idskills'           => $request->input('skills_idskills', 1),
+            ]);
+        }
+
         return redirect()->route('dashboard')
-            ->with('success', 'Votre profil prestataire a été créé avec succès ! Bienvenue.');
+            ->with('success', 'Votre profil prestataire a été enregistré avec succès ! Bienvenue.');
+    }
+
+    // ================= AFFICHER LE FORMULAIRE DE MODIFICATION =================
+    // Affiche le formulaire pré-rempli avec les infos déjà existantes du prestataire connecté
+    public function modifierProfilForm()
+    {
+        $idConnecte = session('utilisateur_id');
+
+        if (!$idConnecte) {
+            return redirect()->route('login')->withErrors(['code' => 'Votre session a expiré. Veuillez vous reconnecter.']);
+        }
+
+        // On récupère le profil prestataire existant de l'utilisateur connecté
+        $prestataireProfil = Prestataire::where('utilisateur_idutilisateur', $idConnecte)->first();
+
+        if (!$prestataireProfil) {
+            // S'il n'a pas encore de profil prestataire, on le renvoie vers le formulaire de création
+            return redirect()->route('auth.Profile1');
+        }
+
+        // On récupère aussi son premier service (s'il existe) pour pré-remplir la section "service"
+        $premierService = \App\Models\Service::where('prestataire_idprestataire', $prestataireProfil->idprestataire)->first();
+
+        return view('auth.Profile1Edit', compact('prestataireProfil', 'premierService'));
+    }
+
+    // ================= TRAITER LA MODIFICATION =================
+    public function modifierProfil(Request $request)
+    {
+        $idConnecte = session('utilisateur_id');
+
+        if (!$idConnecte) {
+            return redirect()->route('login')->withErrors(['code' => 'Votre session a expiré. Veuillez vous reconnecter.']);
+        }
+
+        $prestataireProfil = Prestataire::where('utilisateur_idutilisateur', $idConnecte)->first();
+
+        if (!$prestataireProfil) {
+            return redirect()->route('auth.Profile1');
+        }
+
+        // Validation des champs envoyés par le formulaire
+        $request->validate([
+            'type_prestataire' => 'required|string|max:255',
+            'niveau'            => 'required|string|max:45',
+            'bio'               => 'nullable|string',
+        ]);
+
+        // Mise à jour des informations du profil (sur la ligne existante, pas une nouvelle ligne)
+        $prestataireProfil->type_prestataire = $request->input('type_prestataire');
+        $prestataireProfil->niveau           = $request->input('niveau');
+        $prestataireProfil->bio              = $request->input('bio');
+        $prestataireProfil->save();
+
+        // Si un service existe déjà, on met aussi à jour ses informations
+        $premierService = \App\Models\Service::where('prestataire_idprestataire', $prestataireProfil->idprestataire)->first();
+
+        if ($premierService) {
+            $premierService->titre        = $request->input('titre', $premierService->titre);
+            $premierService->description  = $request->input('description', $premierService->description);
+            $premierService->prix_base    = $request->input('prix_base', $premierService->prix_base);
+            if ($request->filled('skills_idskills')) {
+                $premierService->skills_idskills = $request->input('skills_idskills');
+            }
+            $premierService->save();
+        }
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Votre profil a été mis à jour avec succès !');
     }
 }

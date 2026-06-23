@@ -1012,7 +1012,7 @@
             {{ session('lang','fr') === 'ar' ? 'موصى به لك' : 'RECOMMANDÉ POUR VOUS' }}
         </p>
         <div class="rec-grid">
-            <div class="rec-card" style="grid-column: span 3;">
+            <a href="{{ route('prestataire.modifier.form') }}" class="rec-card" style="grid-column: span 3; text-decoration:none; cursor:pointer;">
                 <div class="rec-icon rec-ic-green">
                     <i class="fa-solid fa-chart-line"></i>
                 </div>
@@ -1027,7 +1027,7 @@
                         {{ session('lang','fr') === 'ar' ? 'ملف مكتمل يجذب 3x أكثر من العملاء' : 'Un profil complet attire 3× plus de clients' }}
                     </p>
                 </div>
-            </div>
+            </a>
         </div>
  
         <div style="background: #ffffff; border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(7,46,51, 0.02); border: 1px solid rgba(221,238,241, 0.6); overflow: hidden; pointer-events: none; user-select: none;">

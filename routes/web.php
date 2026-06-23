@@ -77,6 +77,10 @@ Route::post('/envoyer-message', [MessageController::class, 'envoyer']);
 Route::post('/ajouter-competence', [pres_skilsController::class, 'lierCompetence']);
 Route::post('/devenir-prestataire', [PrestataireController::class, 'devenirPrestataire'])->name('devenir.prestataire');
 
+// ================= MODIFIER LE PROFIL PRESTATAIRE (déjà existant) =================
+Route::get('/profile/modifier', [PrestataireController::class, 'modifierProfilForm'])->name('prestataire.modifier.form');
+Route::post('/profile/modifier', [PrestataireController::class, 'modifierProfil'])->name('prestataire.modifier');
+
 // ================= OTP CONNEXION & ACTIVATION =================
 Route::get('/login/verify',  [AuthController::class, 'showVerifyForm'])->name('otp.verify.form');
 Route::post('/login/send',   [AuthController::class, 'sendOtp'])->name('otp.send');

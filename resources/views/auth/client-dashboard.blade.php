@@ -1169,7 +1169,7 @@
         </p>
         <div class="rec-grid">
 
-            <a href="#section-freelancers" onclick="document.getElementById('section-freelancers').scrollIntoView({behavior: 'smooth'}); return false;" class="rec-card" style="text-decoration: none; display: flex; align-items: center; gap: 15px;">
+            <a href="#section-freelancers" onclick="resetFiltreService(); var lb=document.getElementById('liste-services-box'); if(lb) lb.style.display='none'; document.getElementById('section-freelancers').scrollIntoView({behavior: 'smooth'}); return false;" class="rec-card" style="text-decoration: none; display: flex; align-items: center; gap: 15px;">
                 <div class="rec-icon rec-ic-blue">
                     <i class="fa-solid fa-users"></i>
                 </div>
@@ -1180,7 +1180,64 @@
                 </div>
             </a>
 
+            <a href="#" onclick="toggleListeServices(); return false;" class="rec-card" style="text-decoration: none; display: flex; align-items: center; gap: 15px;">
+                <div class="rec-icon rec-ic-blue" style="background: rgba(247,158,27,0.12); color:#F59E0B;">
+                    <i class="fa-solid fa-list-check"></i>
+                </div>
+                <div class="rec-body">
+                    <p class="rec-eyebrow">{{ session('lang','fr') === 'ar' ? 'الخدمات' : 'SERVICES' }}</p>
+                    <p class="rec-title">{{ session('lang','fr') === 'ar' ? 'عرض جميع الخدمات' : 'Voir tous les services' }}</p>
+                    <p class="rec-desc">{{ session('lang','fr') === 'ar' ? 'اختر خدمة لعرض المستقلين المعنيين' : 'Choisissez un service pour voir les freelancers concernés' }}</p>
+                </div>
+            </a>
+
         </div>
+
+        {{-- ===== LISTE DES SERVICES (générée depuis les vraies données $freelancersData) ===== --}}
+        @php
+            // On construit la liste des services réellement présents en base,
+            // à partir de $freelancersData déjà chargé depuis la table `prestataire`/`service`.
+            $servicesDisponibles = collect($freelancersData)
+                ->filter(fn($f) => !empty($f['role']) && $f['role'] !== 'Prestataire Indépendant')
+                ->unique('role')
+                ->values();
+        @endphp
+        <div id="liste-services-box" style="display:none; background:#ffffff; border-radius:20px; padding:28px; margin-bottom:25px; box-shadow:0 10px 25px rgba(27,37,89,0.04); border:1px solid #E9EDF7;">
+            <h3 style="font-size:17px; font-weight:700; color:var(--dark); margin-bottom:18px;">
+                <i class="fa-solid fa-list-check" style="color:#F59E0B; margin-right:8px;"></i>
+                {{ session('lang','fr') === 'ar' ? 'اختر خدمة' : 'Choisissez un service' }}
+            </h3>
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                @forelse($servicesDisponibles as $s)
+                    <button type="button"
+                        onclick="filtrerFreelancersParService('{{ addslashes($s['role']) }}', this)"
+                        class="btn-service-filtre"
+                        style="padding:10px 18px; border-radius:30px; border:1.5px solid #E9EDF7; background:#F7FAFC; color:var(--dark); font-size:13.5px; font-weight:600; cursor:pointer; transition:0.2s;">
+                        {{ $s['role'] }}
+                    </button>
+                @empty
+                    <p style="color:#8A94A6; font-size:14px;">{{ session('lang','fr') === 'ar' ? 'لا توجد خدمات متاحة حالياً.' : 'Aucun service disponible pour le moment.' }}</p>
+                @endforelse
+            </div>
+
+            <div id="filtre-service-actif-info" style="display:none; margin-top:18px; padding:12px 18px; background:rgba(12,171,168,0.08); border:1px solid rgba(12,171,168,0.25); border-radius:14px; align-items:center; justify-content:space-between;">
+                <span style="font-size:14px; color:var(--dark); font-weight:600;">
+                    {{ session('lang','fr') === 'ar' ? 'الخدمة المختارة' : 'Service choisi' }} : <span id="filtre-service-actif-nom" style="color:var(--color-accent,#0CABA8);"></span>
+                </span>
+                <button type="button" onclick="resetFiltreService()" style="background:none; border:none; color:var(--color-accent,#0CABA8); font-weight:600; cursor:pointer; font-size:13px; text-decoration:underline;">
+                    {{ session('lang','fr') === 'ar' ? 'إعادة تعيين' : 'Réinitialiser' }}
+                </button>
+            </div>
+        </div>
+
+        <style>
+        .btn-service-filtre:hover { border-color: var(--color-accent,#0CABA8); color: var(--color-accent,#0CABA8); }
+        .btn-service-filtre.btn-service-selected {
+            background: var(--color-accent,#0CABA8) !important;
+            color: white !important;
+            border-color: var(--color-accent,#0CABA8) !important;
+        }
+        </style>
 
         {{-- MESSAGES --}}
         @php
@@ -1481,9 +1538,9 @@
         </h2>
     </div>
 
-<div class="freelancers-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
+<div class="freelancers-grid" id="freelancers-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
     @forelse($freelancersData as $freelancer)
-    <div class="fl-card"
+    <div class="fl-card" data-fl-role="{{ $freelancer['role'] }}"
          @if(!empty($freelancer['user_id']))
              onclick="window.location.href='{{ route('profil.show', $freelancer['user_id']) }}'"
              style="background: white; border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px rgba(27, 37, 89, 0.02); border: 1px solid #E9EDF7; display: flex; flex-direction: column; justify-content: space-between; min-height: 250px; cursor: pointer;"
@@ -1584,6 +1641,57 @@
 <div class="toast" id="toast"></div>
 
 <script>
+    /* ── Afficher / cacher la boîte "Choisissez un service" ── */
+    function toggleListeServices() {
+        const box = document.getElementById('liste-services-box');
+        if (!box) return;
+        if (box.style.display === 'none' || box.style.display === '') {
+            box.style.display = 'block';
+            box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    /* ── Filtrage des freelancers par service précis (clic sur un bouton de service) ── */
+    function filtrerFreelancersParService(nomService, btnElement) {
+        const cartesFreelancers = document.querySelectorAll('#freelancers-grid .fl-card');
+        let visibleCount = 0;
+
+        cartesFreelancers.forEach(card => {
+            if (card.getAttribute('data-fl-role') === nomService) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Marquer visuellement le bouton de service sélectionné
+        document.querySelectorAll('.btn-service-filtre').forEach(b => b.classList.remove('btn-service-selected'));
+        if (btnElement) btnElement.classList.add('btn-service-selected');
+
+        // Afficher le bandeau "Service choisi"
+        const infoBox = document.getElementById('filtre-service-actif-info');
+        const infoNom = document.getElementById('filtre-service-actif-nom');
+        if (infoBox && infoNom) {
+            infoNom.textContent = nomService + ' (' + visibleCount + ' freelancer' + (visibleCount > 1 ? 's' : '') + ')';
+            infoBox.style.display = 'flex';
+        }
+
+        // Scroll automatique vers la liste filtrée des freelancers
+        document.getElementById('section-freelancers').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetFiltreService() {
+        document.querySelectorAll('#freelancers-grid .fl-card').forEach(card => {
+            card.style.display = '';
+        });
+        document.querySelectorAll('.btn-service-filtre').forEach(b => b.classList.remove('btn-service-selected'));
+        const infoBox = document.getElementById('filtre-service-actif-info');
+        if (infoBox) infoBox.style.display = 'none';
+    }
+
     /* ── Avatar dropdown ── */
     function toggleDropdown() {
         document.getElementById('userDropdown').classList.toggle('open');
